@@ -1,0 +1,164 @@
+/* STREAMING_CHUNK:Defining CSS custom properties and variables... */
+:root {
+    --bg-slate-950: #020617;
+    --bg-slate-900: #0f172a;
+    --bg-slate-850: #131e32;
+    --bg-slate-800: #1e293b;
+    --border-slate-800: #1e293b;
+    --border-slate-700: #334155;
+    --accent-blue: #3b82f6;
+    --accent-emerald: #10b981;
+    --accent-rose: #f43f5e;
+    --accent-amber: #f59e0b;
+    --accent-purple: #8b5cf6;
+}
+
+/* STREAMING_CHUNK:Styling body and base typography... */
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-slate-950);
+    color: #f8fafc;
+    min-height: 100vh;
+}
+
+/* STREAMING_CHUNK:Custom scrollbar styling... */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-slate-900);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-slate-700);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* STREAMING_CHUNK:Glassmorphism and Card Styling... */
+.glass-card {
+    background-color: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-slate-800);
+    border-radius: 1rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+    border-color: rgba(51, 65, 85, 0.8);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+}
+
+/* STREAMING_CHUNK:Online Offline Pulse Dot Animations... */
+.pulse-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+}
+
+.pulse-dot-online {
+    background-color: var(--accent-emerald);
+    box-shadow: 0 0 10px var(--accent-emerald);
+}
+
+.pulse-dot-online::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-emerald);
+    animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.pulse-dot-offline {
+    background-color: var(--accent-rose);
+    box-shadow: 0 0 8px var(--accent-rose);
+}
+
+@keyframes pulse-ring {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+
+    50% {
+        transform: scale(1.6);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+}
+
+/* STREAMING_CHUNK:Dynamic Status Badges... */
+.badge-status {
+    padding: 0.2rem 0.65rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.badge-active {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-inactive {
+    background-color: rgba(244, 63, 94, 0.15);
+    color: #fb7185;
+    border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.badge-warning {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-neutral {
+    background-color: rgba(30, 41, 59, 0.8);
+    color: #94a3b8;
+    border: 1px solid var(--border-slate-800);
+}
+
+/* STREAMING_CHUNK:Progress Bar styling... */
+.progress-track {
+    width: 100%;
+    height: 6px;
+    background-color: rgba(30, 41, 59, 0.8);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 0.5s ease-out, background-color 0.3s ease;
+}
+
+/* STREAMING_CHUNK:Chart containers layout... */
+.chart-container-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 260px;
+}

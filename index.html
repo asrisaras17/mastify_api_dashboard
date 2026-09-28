@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuel Self Service (FSS) Live Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#131e32',
+                            900: '#0f172a',
+                            950: '#020617',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Custom Shared CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body
+    class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-purple-600 selection:text-white">
+
+    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Title -->
+                <div class="flex items-center gap-3">
+                    <div
+                        class="bg-gradient-to-tr from-purple-600 to-indigo-500 p-2.5 rounded-xl shadow-lg shadow-purple-500/20 text-white">
+                        <i class="fa-solid fa-gas-pump text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-wide text-white">FSS Live Dashboard</h1>
+                        <p class="text-xs text-slate-400 font-medium">Fuel Self Service Telemetry</p>
+                    </div>
+                </div>
+
+                <!-- Status & Action Controls -->
+                <div class="flex items-center gap-3">
+                    <!-- Connection Badge -->
+                    <div id="connectionBadge"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                        <span id="connectionDot" class="pulse-dot pulse-dot-offline"></span>
+                        <span id="connectionText">Disconnected</span>
+                    </div>
+
+                    <!-- Polling Toggle -->
+                    <button id="togglePollingBtn" onclick="togglePolling()" title="Pause/Resume Auto Polling"
+                        class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                        <i id="pollingIcon" class="fa-solid fa-pause text-amber-400"></i>
+                        <span id="pollingText" class="hidden md:inline">Auto 5s</span>
+                    </button>
+
+                    <!-- Manual Refresh Button -->
+                    <button id="refreshBtn" onclick="fetchTelemetry()" title="Refresh Data Now"
+                        class="p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium bg-purple-600 hover:bg-purple-500 text-white transition shadow-md shadow-purple-600/20 active:scale-95">
+                        <i id="refreshIcon" class="fa-solid fa-rotate"></i>
+                        <span class="hidden sm:inline ml-1.5">Refresh</span>
+                    </button>
+
+                    <!-- Config / Login Modal Trigger -->
+                    <button onclick="openConfigModal()" title="API & Login Settings"
+                        class="p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                        <i class="fa-solid fa-gear"></i>
+                        <span class="hidden md:inline ml-1.5">Config</span>
+                    </button>
+
+                    <!-- Logout Button -->
+                    <button id="logoutBtn" onclick="logout()" title="Logout"
+                        class="hidden p-2 rounded-lg text-xs font-medium bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 transition">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Banner Notification -->
+        <div id="authAlert"
+            class="hidden p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm flex items-start gap-3 shadow-lg">
+            <i class="fa-solid fa-circle-exclamation text-lg mt-0.5 text-amber-400"></i>
+            <div class="flex-1">
+                <h4 class="font-semibold text-amber-200">Autentikasi Diperlukan</h4>
+                <p id="authAlertMessage" class="text-xs text-amber-300/80 mt-0.5">Silakan masuk dengan kredensial
+                    Mastify/Thingsboard untuk mengalirkan data FSS.</p>
+            </div>
+            <button onclick="openConfigModal()"
+                class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs rounded-lg transition">
+                Login Now
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+            <!-- Card 1: Used Fuel -->
+            <div class="glass-card p-5 relative overflow-hidden group">
+                <div
+                    class="absolute -right-4 -bottom-4 opacity-5 text-slate-100 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-droplet text-8xl"></i>
+                </div>
+                <div class="flex items-center justify-between mb-2">
+                    <span
+                        class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-gas-pump text-purple-400"></i> Used Fuel
+                    </span>
+                    <span id="fuelBadge" class="badge-status badge-neutral">used_fuel</span>
+                </div>
+                <div class="flex items-baseline gap-2 mt-2">
+                    <span id="fuelValue" class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">--</span>
+                    <span class="text-slate-400 font-medium text-sm">Liters</span>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock text-slate-600"></i>
+                    Updated: <span id="fuelTime" class="text-slate-400">Never</span>
+                </p>
+            </div>
+
+            <!-- Card 2: System Status -->
+            <div class="glass-card p-5 relative overflow-hidden group">
+                <div
+                    class="absolute -right-4 -bottom-4 opacity-5 text-slate-100 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-server text-8xl"></i>
+                </div>
+                <div class="flex items-center justify-between mb-2">
+                    <span
+                        class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-shield-halved text-emerald-400"></i> FSS Status
+                    </span>
+                    <span class="badge-status badge-neutral">status</span>
+                </div>
+                <div class="flex items-center gap-2.5 mt-2">
+                    <span id="statusBadge" class="badge-status badge-neutral text-sm px-3 py-1">UNKNOWN</span>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-3 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock text-slate-600"></i>
+                    Updated: <span id="statusTime" class="text-slate-400">Never</span>
+                </p>
+            </div>
+
+            <!-- Card 3: CPU Usage -->
+            <div class="glass-card p-5 relative overflow-hidden group">
+                <div
+                    class="absolute -right-4 -bottom-4 opacity-5 text-slate-100 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-microchip text-8xl"></i>
+                </div>
+                <div class="flex items-center justify-between mb-2">
+                    <span
+                        class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-cpu text-blue-400"></i> CPU Usage
+                    </span>
+                    <span class="badge-status badge-neutral">cpu_usage</span>
+                </div>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <span id="cpuValue" class="text-3xl font-extrabold text-white tracking-tight">--</span>
+                    <span class="text-slate-400 font-medium text-sm">%</span>
+                </div>
+                <!-- Progress bar -->
+                <div class="progress-track mt-2">
+                    <div id="cpuBar" class="progress-fill bg-blue-500" style="width: 0%"></div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock text-slate-600"></i>
+                    Updated: <span id="cpuTime" class="text-slate-400">Never</span>
+                </p>
+            </div>
+
+            <!-- Card 4: RAM Usage -->
+            <div class="glass-card p-5 relative overflow-hidden group">
+                <div
+                    class="absolute -right-4 -bottom-4 opacity-5 text-slate-100 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-memory text-8xl"></i>
+                </div>
+                <div class="flex items-center justify-between mb-2">
+                    <span
+                        class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-memory text-indigo-400"></i> RAM Usage
+                    </span>
+                    <span class="badge-status badge-neutral">ram_usage</span>
+                </div>
+                <div class="flex items-baseline gap-1 mt-1">
+                    <span id="ramValue" class="text-3xl font-extrabold text-white tracking-tight">--</span>
+                    <span class="text-slate-400 font-medium text-sm">%</span>
+                </div>
+                <!-- Progress bar -->
+                <div class="progress-track mt-2">
+                    <div id="ramBar" class="progress-fill bg-indigo-500" style="width: 0%"></div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock text-slate-600"></i>
+                    Updated: <span id="ramTime" class="text-slate-400">Never</span>
+                </p>
+            </div>
+
+        </div>
+
+        <!-- Chart Area Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Chart 1: Fuel Usage History -->
+            <div class="glass-card p-5 flex flex-col justify-between">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-purple-400"></i>
+                            Fuel Consumption History
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Konsumsi bahan bakar kumulatif (Liters)</p>
+                    </div>
+                    <button onclick="clearChart(fuelChart)"
+                        class="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">
+                        Clear
+                    </button>
+                </div>
+                <!-- Container canvas dengan tinggi eksplisit dan position relative -->
+                <div class="relative w-full h-[280px] sm:h-[320px]">
+                    <canvas id="fuelChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Hardware Resources -->
+            <div class="glass-card p-5 flex flex-col justify-between">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-area text-blue-400"></i>
+                            Hardware Resource Usage
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Beban CPU & RAM Perangkat FSS (%)</p>
+                    </div>
+                    <button onclick="clearChart(resourceChart)"
+                        class="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">
+                        Clear
+                    </button>
+                </div>
+                <!-- Container canvas dengan tinggi eksplisit dan position relative -->
+                <div class="relative w-full h-[280px] sm:h-[320px]">
+                    <canvas id="resourceChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="glass-card p-5 space-y-3">
+            <button onclick="toggleDebugPanel()"
+                class="w-full flex items-center justify-between text-left text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200">
+                <span class="flex items-center gap-2">
+                    <i class="fa-solid fa-code text-indigo-400"></i> Raw Telemetry Payload Inspector
+                </span>
+                <i id="debugChevron" class="fa-solid fa-chevron-down transition-transform"></i>
+            </button>
+            <div id="debugPanel" class="hidden pt-2 border-t border-slate-800">
+                <pre id="rawPayload"
+                    class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-emerald-400 overflow-x-auto border border-slate-800/80 max-h-60">Menunggu respons data telemetri FSS...</pre>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="configModal"
+        class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                        <i class="fa-solid fa-sliders text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base text-white">Konfigurasi FSS API</h3>
+                        <p class="text-xs text-slate-400">Atur Host REST API & Login Mastify</p>
+                    </div>
+                </div>
+                <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white p-1 rounded-lg transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="configForm" onsubmit="handleLoginSubmit(event)" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Base Host URL</label>
+                    <input type="text" id="inputBaseUrl" required
+                        class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-purple-500 transition font-mono"
+                        placeholder="http://178.128.107.238:8080">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">FSS Device ID</label>
+                    <input type="text" id="inputDeviceId" required
+                        class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-purple-500 transition font-mono"
+                        placeholder="fss-device-id-001">
+                </div>
+
+                <div class="border-t border-slate-800 pt-2">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kredensial Login</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Username / Email</label>
+                    <input type="text" id="inputUsername" required
+                        class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-purple-500 transition"
+                        placeholder="Username Mastify">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                    <input type="password" id="inputPassword" required
+                        class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-purple-500 transition"
+                        placeholder="••••••••">
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeConfigModal()"
+                        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs rounded-lg transition">
+                        Batal
+                    </button>
+                    <button type="submit" id="loginSubmitBtn"
+                        class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs rounded-lg transition shadow-md shadow-purple-600/30 flex items-center gap-2">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span id="loginBtnText">Login & Connect</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        const CONFIG_KEY = 'FSS_CONFIG_V2';
+        let config = {
+            baseUrl: 'http://178.128.107.238:8080',
+            deviceId: 'fss-device-id-001',
+            token: '',
+            username: ''
+        };
+
+        let pollingInterval = null;
+        let isPollingActive = true;
+        let fuelChart = null;
+        let resourceChart = null;
+        const maxDataPoints = 25;
+
+        window.onload = function () {
+            loadSavedConfig();
+            initCharts();
+            updateUIState();
+
+            if (config.token) {
+                startPolling();
+                fetchTelemetry();
+            } else {
+                openConfigModal();
+            }
+        };
+
+        function loadSavedConfig() {
+            const saved = localStorage.getItem(CONFIG_KEY);
+            if (saved) {
+                try {
+                    config = { ...config, ...JSON.parse(saved) };
+                } catch (e) {
+                    console.error("Config parse error", e);
+                }
+            }
+            document.getElementById('inputBaseUrl').value = config.baseUrl;
+            document.getElementById('inputDeviceId').value = config.deviceId;
+            document.getElementById('inputUsername').value = config.username || '';
+        }
+
+        function saveConfig() {
+            localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+        }
+
+        function initCharts() {
+            // Chart 1: Fuel Usage Line Chart
+            const ctx1 = document.getElementById('fuelChart').getContext('2d');
+            const fuelGradient = ctx1.createLinearGradient(0, 0, 0, 250);
+            fuelGradient.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+            fuelGradient.addColorStop(1, 'rgba(168, 85, 247, 0.0)');
+
+            fuelChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Used Fuel (Liters)',
+                        data: [],
+                        borderColor: '#a855f7',
+                        borderWidth: 2.5,
+                        backgroundColor: fuelGradient,
+                        fill: true,
+                        tension: 0.35,
+                        pointBackgroundColor: '#c084fc',
+                        pointRadius: 3
+                    }]
+                },
+                options: getCommonChartOptions()
+            });
+
+            // Chart 2: Multi-Line Hardware Usage
+            const ctx2 = document.getElementById('resourceChart').getContext('2d');
+            resourceChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'CPU Usage (%)',
+                            data: [],
+                            borderColor: '#3b82f6',
+                            borderWidth: 2,
+                            backgroundColor: 'transparent',
+                            tension: 0.3,
+                            pointRadius: 3
+                        },
+                        {
+                            label: 'RAM Usage (%)',
+                            data: [],
+                            borderColor: '#6366f1',
+                            borderWidth: 2,
+                            backgroundColor: 'transparent',
+                            tension: 0.3,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: getCommonChartOptions(100)
+            });
+        }
+
+        function getCommonChartOptions(maxLimit = null) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(51, 65, 85, 0.2)' },
+                        ticks: { color: '#94a3b8', font: { size: 10 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(51, 65, 85, 0.2)' },
+                        ticks: { color: '#94a3b8', font: { size: 10 } },
+                        beginAtZero: true,
+                        max: maxLimit
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#cbd5e1', font: { size: 11 } }
+                    }
+                }
+            };
+        }
+
+        async function handleLoginSubmit(event) {
+            event.preventDefault();
+            const baseUrl = document.getElementById('inputBaseUrl').value.trim().replace(/\/+$/, "");
+            const deviceId = document.getElementById('inputDeviceId').value.trim();
+            const username = document.getElementById('inputUsername').value.trim();
+            const password = document.getElementById('inputPassword').value;
+
+            const submitBtn = document.getElementById('loginSubmitBtn');
+            const btnText = document.getElementById('loginBtnText');
+
+            submitBtn.disabled = true;
+            btnText.textContent = "Authenticating...";
+
+            try {
+                const response = await fetch(`${baseUrl}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!response.ok) throw new Error("Gagal login! Periksa username & password.");
+
+                const data = await response.json();
+                config.baseUrl = baseUrl;
+                config.deviceId = deviceId;
+                config.username = username;
+                config.token = data.token;
+                saveConfig();
+
+                showToast("Login Berhasil!", "success");
+                closeConfigModal();
+                updateUIState();
+                fetchTelemetry();
+                startPolling();
+            } catch (err) {
+                showToast(err.message, "error");
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = "Login & Connect";
+            }
+        }
+
+        async function fetchTelemetry() {
+            if (!config.token) {
+                setConnectionStatus("offline", "No Token");
+                return;
+            }
+
+            document.getElementById('refreshIcon').classList.add('fa-spin');
+            const url = `${config.baseUrl}/api/plugins/telemetry/DEVICE/${config.deviceId}/values/timeseries?keys=used_fuel,cpu_usage,ram_usage,status`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Authorization': `Bearer ${config.token}`
+                    }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error("Sesi token habis.");
+                }
+
+                if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+
+                const data = await response.json();
+                parseAndUpdateDashboard(data);
+                setConnectionStatus("online", "Connected");
+
+            } catch (err) {
+                console.error(err);
+                setConnectionStatus("offline", "Error");
+                if (err.message.includes("Sesi token")) {
+                    config.token = '';
+                    saveConfig();
+                    updateUIState();
+                }
+                showToast(err.message, "error");
+            } finally {
+                setTimeout(() => {
+                    document.getElementById('refreshIcon').classList.remove('fa-spin');
+                }, 400);
+            }
+        }
+
+        function parseAndUpdateDashboard(payload) {
+            document.getElementById('rawPayload').textContent = JSON.stringify(payload, null, 2);
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            // 1. Used Fuel
+            let fuelVal = 0;
+            if (payload.used_fuel && payload.used_fuel.length > 0) {
+                fuelVal = parseFloat(payload.used_fuel[0].value) || 0;
+                document.getElementById('fuelValue').textContent = fuelVal.toFixed(2);
+                document.getElementById('fuelTime').textContent = new Date(payload.used_fuel[0].ts).toLocaleTimeString();
+            }
+
+            // 2. Status
+            if (payload.status && payload.status.length > 0) {
+                const rawStatus = String(payload.status[0].value).toUpperCase();
+                const statusBadge = document.getElementById('statusBadge');
+                document.getElementById('statusTime').textContent = new Date(payload.status[0].ts).toLocaleTimeString();
+
+                statusBadge.textContent = rawStatus;
+                if (["ACTIVE", "READY", "DISPENSING", "RUNNING", "1", "TRUE"].includes(rawStatus)) {
+                    statusBadge.className = "badge-status badge-active text-sm px-3 py-1";
+                } else if (["INACTIVE", "OFFLINE", "STOPPED", "0", "FALSE"].includes(rawStatus)) {
+                    statusBadge.className = "badge-status badge-inactive text-sm px-3 py-1";
+                } else {
+                    statusBadge.className = "badge-status badge-warning text-sm px-3 py-1";
+                }
+            }
+
+            // 3. CPU Usage
+            let cpuVal = 0;
+            if (payload.cpu_usage && payload.cpu_usage.length > 0) {
+                cpuVal = parseFloat(payload.cpu_usage[0].value) || 0;
+                document.getElementById('cpuValue').textContent = cpuVal.toFixed(1);
+                document.getElementById('cpuBar').style.width = `${Math.min(100, cpuVal)}%`;
+                document.getElementById('cpuTime').textContent = new Date(payload.cpu_usage[0].ts).toLocaleTimeString();
+            }
+
+            // 4. RAM Usage
+            let ramVal = 0;
+            if (payload.ram_usage && payload.ram_usage.length > 0) {
+                ramVal = parseFloat(payload.ram_usage[0].value) || 0;
+                document.getElementById('ramValue').textContent = ramVal.toFixed(1);
+                document.getElementById('ramBar').style.width = `${Math.min(100, ramVal)}%`;
+                document.getElementById('ramTime').textContent = new Date(payload.ram_usage[0].ts).toLocaleTimeString();
+            }
+
+            // Update Realtime Charts
+            updateCharts(timestamp, fuelVal, cpuVal, ramVal);
+        }
+
+        function updateCharts(timeLabel, fuel, cpu, ram) {
+            // Fuel Chart Update
+            if (fuelChart) {
+                fuelChart.data.labels.push(timeLabel);
+                fuelChart.data.datasets[0].data.push(fuel);
+                if (fuelChart.data.labels.length > maxDataPoints) {
+                    fuelChart.data.labels.shift();
+                    fuelChart.data.datasets[0].data.shift();
+                }
+                fuelChart.update('none');
+            }
+
+            // Resource Chart Update
+            if (resourceChart) {
+                resourceChart.data.labels.push(timeLabel);
+                resourceChart.data.datasets[0].data.push(cpu);
+                resourceChart.data.datasets[1].data.push(ram);
+                if (resourceChart.data.labels.length > maxDataPoints) {
+                    resourceChart.data.labels.shift();
+                    resourceChart.data.datasets[0].data.shift();
+                    resourceChart.data.datasets[1].data.shift();
+                }
+                resourceChart.update('none');
+            }
+        }
+
+        function clearChart(chart) {
+            if (chart) {
+                chart.data.labels = [];
+                chart.data.datasets.forEach(ds => ds.data = []);
+                chart.update();
+            }
+        }
+
+        function startPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            isPollingActive = true;
+            pollingInterval = setInterval(fetchTelemetry, 5000);
+            updatePollingUI();
+        }
+
+        function stopPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = null;
+            isPollingActive = false;
+            updatePollingUI();
+        }
+
+        function togglePolling() {
+            if (isPollingActive) {
+                stopPolling();
+                showToast("Auto Polling Dihentikan", "info");
+            } else {
+                startPolling();
+                fetchTelemetry();
+                showToast("Auto Polling Aktif (5s)", "info");
+            }
+        }
+
+        function updatePollingUI() {
+            const icon = document.getElementById('pollingIcon');
+            const text = document.getElementById('pollingText');
+            if (isPollingActive) {
+                icon.className = "fa-solid fa-pause text-amber-400";
+                if (text) text.textContent = "Auto 5s";
+            } else {
+                icon.className = "fa-solid fa-play text-emerald-400";
+                if (text) text.textContent = "Paused";
+            }
+        }
+
+        function setConnectionStatus(status, label) {
+            const badge = document.getElementById('connectionBadge');
+            const dot = document.getElementById('connectionDot');
+            const text = document.getElementById('connectionText');
+
+            text.textContent = label || status;
+
+            if (status === 'online') {
+                badge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                dot.className = "pulse-dot pulse-dot-online";
+            } else {
+                badge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+                dot.className = "pulse-dot pulse-dot-offline";
+            }
+        }
+
+        function logout() {
+            config.token = '';
+            saveConfig();
+            stopPolling();
+            updateUIState();
+            setConnectionStatus("offline", "Logged Out");
+            showToast("Berhasil logout", "info");
+        }
+
+        function updateUIState() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            const authAlert = document.getElementById('authAlert');
+
+            if (config.token) {
+                logoutBtn.classList.remove('hidden');
+                authAlert.classList.add('hidden');
+            } else {
+                logoutBtn.classList.add('hidden');
+                authAlert.classList.remove('hidden');
+            }
+        }
+
+        function openConfigModal() {
+            document.getElementById('configModal').classList.remove('hidden');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').classList.add('hidden');
+        }
+
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debugPanel');
+            const chevron = document.getElementById('debugChevron');
+            panel.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            let bgClass = "bg-slate-900 border-slate-700 text-slate-100";
+            let iconClass = "fa-circle-info text-blue-400";
+
+            if (type === 'success') {
+                bgClass = "bg-emerald-950/90 border-emerald-800 text-emerald-200";
+                iconClass = "fa-circle-check text-emerald-400";
+            } else if (type === 'error') {
+                bgClass = "bg-rose-950/90 border-rose-800 text-rose-200";
+                iconClass = "fa-circle-xmark text-rose-400";
+            }
+
+            toast.className = `pointer-events-auto p-3.5 rounded-xl border shadow-xl flex items-center gap-3 text-xs font-medium transition-all transform translate-y-2 opacity-0 ${bgClass}`;
+            toast.innerHTML = `<i class="fa-solid ${iconClass} text-base"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+
+</html>
