@@ -1,0 +1,13 @@
+# Environment variables
+.env
+.env*.local
+*.env
+
+# Local sensitive tokens
+token_vercel.txt
+
+# Vercel project artifacts
+.vercel
+
+# Node modules (if any)
+node_modules/
