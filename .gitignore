@@ -11,3 +11,5 @@ token_vercel.txt
 
 # Node modules (if any)
 node_modules/
+
+.vercel
