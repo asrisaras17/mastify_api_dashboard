@@ -256,6 +256,7 @@
 
         </div>
 
+        <!-- Raw Telemetry Payload Inspector -->
         <div class="glass-card p-5 space-y-3">
             <button onclick="toggleDebugPanel()"
                 class="w-full flex items-center justify-between text-left text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200">
@@ -272,6 +273,7 @@
 
     </main>
 
+    <!-- Config Modal -->
     <div id="configModal"
         class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
@@ -293,7 +295,7 @@
             <form id="configForm" onsubmit="handleLoginSubmit(event)" class="p-5 space-y-4">
                 <div>
                     <label class="block text-xs font-medium text-slate-300 mb-1">Base Host URL</label>
-                    <input type="text" id="inputBaseUrl" required
+                    <input type="text" id="inputBaseUrl"
                         class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-purple-500 transition font-mono"
                         placeholder="http://178.128.107.238:8080">
                 </div>
@@ -378,13 +380,23 @@
                     console.error("Config parse error", e);
                 }
             }
-            document.getElementById('inputBaseUrl').value = config.baseUrl;
-            document.getElementById('inputDeviceId').value = config.deviceId;
+            document.getElementById('inputBaseUrl').value = config.baseUrl || '';
+            document.getElementById('inputDeviceId').value = config.deviceId || '';
             document.getElementById('inputUsername').value = config.username || '';
         }
 
         function saveConfig() {
             localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+        }
+
+        // Helper untuk menghasilkan URL API yang kompatibel dengan Vercel Reverse Proxy (HTTPS)
+        function getApiUrl(endpoint) {
+            const rawBaseUrl = (config.baseUrl || '').trim().replace(/\/+$/, "");
+            // Jika berjalan di HTTPS (Vercel) dan URL berawalan http://, gunakan endpoint relatif proxy
+            if (window.location.protocol === 'https:' && rawBaseUrl.startsWith('http://')) {
+                return endpoint;
+            }
+            return rawBaseUrl ? `${rawBaseUrl}${endpoint}` : endpoint;
         }
 
         function initCharts() {
@@ -483,7 +495,11 @@
             btnText.textContent = "Authenticating...";
 
             try {
-                const loginUrl = baseUrl ? `${baseUrl}/api/auth/login` : '/api/auth/login';
+                config.baseUrl = baseUrl;
+                config.deviceId = deviceId;
+
+                const endpoint = '/api/auth/login';
+                const loginUrl = getApiUrl(endpoint);
 
                 const response = await fetch(loginUrl, {
                     method: 'POST',
@@ -494,8 +510,6 @@
                 if (!response.ok) throw new Error("Gagal login! Periksa username & password.");
 
                 const data = await response.json();
-                config.baseUrl = baseUrl;
-                config.deviceId = deviceId;
                 config.username = username;
                 config.token = data.token;
                 saveConfig();
@@ -519,19 +533,24 @@
                 return;
             }
 
+            if (!config.deviceId) {
+                setConnectionStatus("offline", "No Device ID");
+                showToast("Device ID belum diisi. Silakan atur di Config.", "error");
+                return;
+            }
+
             document.getElementById('refreshIcon').classList.add('fa-spin');
-            const url = `${config.baseUrl}/api/plugins/telemetry/DEVICE/${config.deviceId}/values/timeseries?keys=used_fuel,cpu_usage,ram_usage,status`;
 
             try {
-                const endpoint = `/api/plugins/telemetry/DEVICE/${deviceId}/values/timeseries?keys=used_fuel,cpu_usage,ram_usage,status`;
-                const telemetryUrl = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
+                const endpoint = `/api/plugins/telemetry/DEVICE/${config.deviceId}/values/timeseries?keys=used_fuel,cpu_usage,ram_usage,status`;
+                const telemetryUrl = getApiUrl(endpoint);
 
                 const response = await fetch(telemetryUrl, {
-                    headers: { 'X-Authorization': `Bearer ${token}` }
+                    headers: { 'X-Authorization': `Bearer ${config.token}` }
                 });
 
                 if (response.status === 401 || response.status === 403) {
-                    throw new Error("Sesi token habis.");
+                    throw new Error("Sesi token habis. Silakan login kembali.");
                 }
 
                 if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
