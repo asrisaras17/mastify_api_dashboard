@@ -1,6 +1,13 @@
 {
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/v2", "destination": "/index_v2.html" }
+    {
+      "source": "/api/:path*",
+      "destination": "http://178.128.107.238:8080/api/:path*"
+    },
+    {
+      "source": "/v2",
+      "destination": "/index_v2.html"
+    }
   ]
 }
