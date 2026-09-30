@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fuel Self Service (FSS) Live Dashboard</title>
+    <title>FSS Single Device Dashboard</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -14,9 +14,9 @@
                 extend: {
                     colors: {
                         slate: {
-                            850: '#131e32',
-                            900: '#0f172a',
-                            950: '#020617',
+                            800: '#1e293b',
+                            850: '#0f172a',
+                            900: '#020617'
                         }
                     }
                 }
@@ -32,19 +32,20 @@
 </head>
 
 <body
-    class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-purple-600 selection:text-white">
+    class="dark bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-purple-600 selection:text-white">
 
-    <header class="bg-slate-900/80 backdrop-blur-md border-b border-slate-800 sticky top-0 z-30">
+    <!-- Header -->
+    <header class="bg-slate-800/80 backdrop-blur-md border-b border-slate-700/80 sticky top-0 z-30 shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Brand Title -->
                 <div class="flex items-center gap-3">
-                    <div
-                        class="bg-gradient-to-tr from-purple-600 to-indigo-500 p-2.5 rounded-xl shadow-lg shadow-purple-500/20 text-white">
+                    <div class="bg-gradient-to-tr from-purple-600 to-indigo-600 p-2.5 rounded-xl shadow-md text-white">
                         <i class="fa-solid fa-gas-pump text-xl"></i>
                     </div>
                     <div>
-                        <h1 class="font-bold text-lg leading-tight tracking-wide text-white">FSS Live Dashboard</h1>
+                        <h1 class="font-bold text-lg leading-tight tracking-wide text-white">FSS Single Device Monitor
+                        </h1>
                         <p class="text-xs text-slate-400 font-medium">Fuel Self Service Telemetry</p>
                     </div>
                 </div>
@@ -53,27 +54,27 @@
                 <div class="flex items-center gap-3">
                     <!-- Connection Badge -->
                     <div id="connectionBadge"
-                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
                         <span id="connectionDot" class="pulse-dot pulse-dot-offline"></span>
                         <span id="connectionText">Disconnected</span>
                     </div>
 
                     <!-- Polling Toggle -->
                     <button id="togglePollingBtn" onclick="togglePolling()" title="Pause/Resume Auto Polling"
-                        class="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
-                        <i id="pollingIcon" class="fa-solid fa-pause text-amber-400"></i>
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                        <i id="pollingIcon" class="fa-solid fa-pause text-amber-500"></i>
                         <span id="pollingText" class="hidden md:inline">Auto 5s</span>
                     </button>
 
                     <!-- Manual Refresh Button -->
                     <button id="refreshBtn" onclick="fetchTelemetry()" title="Refresh Data Now"
-                        class="p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium bg-purple-600 hover:bg-purple-500 text-white transition shadow-md shadow-purple-600/20 active:scale-95">
+                        class="p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium bg-purple-600 hover:bg-purple-700 text-white transition shadow-md shadow-purple-600/30 active:scale-95">
                         <i id="refreshIcon" class="fa-solid fa-rotate"></i>
                         <span class="hidden sm:inline ml-1.5">Refresh</span>
                     </button>
 
                     <!-- Config / Login Modal Trigger -->
-                    <button onclick="openConfigModal()" title="API & Login Settings"
+                    <button onclick="openConfigModal()" title="API & Credentials"
                         class="p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
                         <i class="fa-solid fa-gear"></i>
                         <span class="hidden md:inline ml-1.5">Config</span>
@@ -81,7 +82,7 @@
 
                     <!-- Logout Button -->
                     <button id="logoutBtn" onclick="logout()" title="Logout"
-                        class="hidden p-2 rounded-lg text-xs font-medium bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 border border-rose-500/30 transition">
+                        class="hidden p-2 rounded-lg text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                 </div>
@@ -91,201 +92,208 @@
 
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        <!-- Banner Notification -->
+        <!-- Banner Alert Authentication -->
         <div id="authAlert"
-            class="hidden p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-sm flex items-start gap-3 shadow-lg">
+            class="hidden p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm flex items-start gap-3 shadow-sm">
             <i class="fa-solid fa-circle-exclamation text-lg mt-0.5 text-amber-400"></i>
             <div class="flex-1">
                 <h4 class="font-semibold text-amber-200">Autentikasi Diperlukan</h4>
-                <p id="authAlertMessage" class="text-xs text-amber-300/80 mt-0.5">Silakan masuk dengan kredensial
-                    Mastify/Thingsboard untuk mengalirkan data FSS.</p>
+                <p class="text-xs text-amber-400/80 mt-0.5">Silakan isi kredensial login atau token Thingsboard/Mastify
+                    untuk memulai pemantauan.</p>
             </div>
             <button onclick="openConfigModal()"
-                class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs rounded-lg transition">
+                class="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs rounded-lg transition">
                 Login Now
             </button>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Active Device Info Bar -->
+        <div class="glass-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    <i class="fa-solid fa-microchip text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Target
+                            Device:</span>
+                        <span id="displayDeviceName" class="font-bold text-sm text-white">--</span>
+                        <span id="displayDeviceType"
+                            class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wide">
+                            --
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400 font-mono mt-0.5">
+                        ID: <span id="displayDeviceId" class="text-slate-300">--</span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400">Terakhir Diperbarui:</span>
+                <span id="lastUpdatedText" class="text-xs font-mono text-purple-400 font-semibold">--:--:--</span>
+            </div>
+        </div>
+
+        <!-- Metric Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
             <!-- Card 1: Used Fuel -->
-            <div class="glass-card p-5 relative overflow-hidden group">
-                <div
-                    class="absolute -right-4 -bottom-4 opacity-5 text-slate-100 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-droplet text-8xl"></i>
-                </div>
-                <div class="flex items-center justify-between mb-2">
+            <div class="glass-card p-4 space-y-2 flex flex-col justify-between">
+                <div class="flex items-center justify-between">
                     <span
-                        class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                         <i class="fa-solid fa-gas-pump text-purple-400"></i> Used Fuel
                     </span>
-                    <span id="fuelBadge" class="badge-status badge-neutral">used_fuel</span>
+                    <span class="text-[10px] text-purple-400/80 font-mono">Litres</span>
                 </div>
-                <div class="flex items-baseline gap-2 mt-2">
-                    <span id="fuelValue" class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">--</span>
-                    <span class="text-slate-400 font-medium text-sm">Liters</span>
+                <div class="flex items-baseline gap-2 py-1">
+                    <span id="valFuel" class="text-3xl font-extrabold text-white tracking-tight">--</span>
+                    <span class="text-xs text-slate-400">L</span>
                 </div>
-                <p class="text-[11px] text-slate-500 mt-3 flex items-center gap-1.5">
-                    <i class="fa-solid fa-clock text-slate-600"></i>
-                    Updated: <span id="fuelTime" class="text-slate-400">Never</span>
-                </p>
+                <div class="h-1.5"></div> <!-- Spacer untuk menjaga keseragaman tinggi -->
             </div>
 
-            <!-- Card 2: System Status -->
-            <div class="glass-card p-5 relative overflow-hidden group">
-                <div
-                    class="absolute -right-4 -bottom-4 opacity-5 text-slate-100 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-server text-8xl"></i>
-                </div>
-                <div class="flex items-center justify-between mb-2">
+            <!-- Card 2: Status -->
+            <div class="glass-card p-4 space-y-2 flex flex-col justify-between">
+                <div class="flex items-center justify-between">
                     <span
-                        class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <i class="fa-solid fa-shield-halved text-emerald-400"></i> FSS Status
+                        class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-shield-halved text-emerald-400"></i> Status
                     </span>
-                    <span class="badge-status badge-neutral">status</span>
+                    <span class="text-[10px] text-slate-400 font-mono">System</span>
                 </div>
-                <div class="flex items-center gap-2.5 mt-2">
-                    <span id="statusBadge" class="badge-status badge-neutral text-sm px-3 py-1">UNKNOWN</span>
+                <div class="py-1">
+                    <span id="valStatus" class="badge-status badge-neutral">UNKNOWN</span>
                 </div>
-                <p class="text-[11px] text-slate-500 mt-3 flex items-center gap-1.5">
-                    <i class="fa-solid fa-clock text-slate-600"></i>
-                    Updated: <span id="statusTime" class="text-slate-400">Never</span>
-                </p>
+                <div class="h-1.5"></div> <!-- Spacer -->
             </div>
 
             <!-- Card 3: CPU Usage -->
-            <div class="glass-card p-5 relative overflow-hidden group">
-                <div
-                    class="absolute -right-4 -bottom-4 opacity-5 text-slate-100 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-microchip text-8xl"></i>
-                </div>
-                <div class="flex items-center justify-between mb-2">
+            <div class="glass-card p-4 space-y-2 flex flex-col justify-between">
+                <div class="flex items-center justify-between">
                     <span
-                        class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                         <i class="fa-solid fa-cpu text-blue-400"></i> CPU Usage
                     </span>
-                    <span class="badge-status badge-neutral">cpu_usage</span>
+                    <span class="text-[10px] text-blue-400/80 font-mono">Percent</span>
                 </div>
-                <div class="flex items-baseline gap-1 mt-1">
-                    <span id="cpuValue" class="text-3xl font-extrabold text-white tracking-tight">--</span>
-                    <span class="text-slate-400 font-medium text-sm">%</span>
+                <div class="flex items-baseline gap-1 py-1">
+                    <span id="valCpu" class="text-3xl font-extrabold text-white tracking-tight">--</span>
+                    <span class="text-xs text-slate-400">%</span>
                 </div>
-                <!-- Progress bar -->
-                <div class="progress-track mt-2">
-                    <div id="cpuBar" class="progress-fill bg-blue-500" style="width: 0%"></div>
+                <div class="progress-track h-1.5">
+                    <div id="barCpu" class="progress-fill bg-blue-500 h-full rounded-full transition-all duration-300"
+                        style="width: 0%"></div>
                 </div>
-                <p class="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
-                    <i class="fa-solid fa-clock text-slate-600"></i>
-                    Updated: <span id="cpuTime" class="text-slate-400">Never</span>
-                </p>
             </div>
 
             <!-- Card 4: RAM Usage -->
-            <div class="glass-card p-5 relative overflow-hidden group">
-                <div
-                    class="absolute -right-4 -bottom-4 opacity-5 text-slate-100 group-hover:scale-110 transition-transform">
-                    <i class="fa-solid fa-memory text-8xl"></i>
-                </div>
-                <div class="flex items-center justify-between mb-2">
+            <div class="glass-card p-4 space-y-2 flex flex-col justify-between">
+                <div class="flex items-center justify-between">
                     <span
-                        class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                        class="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                         <i class="fa-solid fa-memory text-indigo-400"></i> RAM Usage
                     </span>
-                    <span class="badge-status badge-neutral">ram_usage</span>
+                    <span class="text-[10px] text-indigo-400/80 font-mono">Percent</span>
                 </div>
-                <div class="flex items-baseline gap-1 mt-1">
-                    <span id="ramValue" class="text-3xl font-extrabold text-white tracking-tight">--</span>
-                    <span class="text-slate-400 font-medium text-sm">%</span>
+                <div class="flex items-baseline gap-1 py-1">
+                    <span id="valRam" class="text-3xl font-extrabold text-white tracking-tight">--</span>
+                    <span class="text-xs text-slate-400">%</span>
                 </div>
-                <!-- Progress bar -->
-                <div class="progress-track mt-2">
-                    <div id="ramBar" class="progress-fill bg-indigo-500" style="width: 0%"></div>
+                <div class="progress-track h-1.5">
+                    <div id="barRam" class="progress-fill bg-indigo-500 h-full rounded-full transition-all duration-300"
+                        style="width: 0%"></div>
                 </div>
-                <p class="text-[11px] text-slate-500 mt-2 flex items-center gap-1.5">
-                    <i class="fa-solid fa-clock text-slate-600"></i>
-                    Updated: <span id="ramTime" class="text-slate-400">Never</span>
-                </p>
             </div>
 
         </div>
 
-        <!-- Chart Area Section -->
+        <!-- Section: Real-time Charts -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            <!-- Chart 1: Fuel Usage History -->
+            <!-- Chart 1: Used Fuel Timeseries -->
             <div class="glass-card p-5 flex flex-col justify-between">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
                     <div>
-                        <h3 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
                             <i class="fa-solid fa-chart-line text-purple-400"></i>
-                            Fuel Consumption History
+                            Grafik Konsumsi BBM (Used Fuel)
                         </h3>
-                        <p class="text-[11px] text-slate-400">Konsumsi bahan bakar kumulatif (Liters)</p>
+                        <p class="text-[11px] text-slate-400">Tren pemakaian bahan bakar real-time</p>
                     </div>
-                    <button onclick="clearChart(fuelChart)"
+                    <button onclick="clearSingleChart(fuelChart)"
                         class="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">
                         Clear
                     </button>
                 </div>
-                <!-- Container canvas dengan tinggi eksplisit dan position relative -->
-                <div class="relative w-full h-[280px] sm:h-[320px]">
+                <div class="relative w-full h-[280px]">
                     <canvas id="fuelChart"></canvas>
                 </div>
             </div>
 
-            <!-- Chart 2: Hardware Resources -->
+            <!-- Chart 2: CPU & RAM Usage Timeseries -->
             <div class="glass-card p-5 flex flex-col justify-between">
-                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                <div class="flex items-center justify-between border-b border-slate-700/60 pb-3 mb-4">
                     <div>
-                        <h3 class="font-bold text-sm text-slate-100 flex items-center gap-2">
+                        <h3 class="font-bold text-sm text-white flex items-center gap-2">
                             <i class="fa-solid fa-chart-area text-blue-400"></i>
-                            Hardware Resource Usage
+                            Beban Hardware (CPU & RAM)
                         </h3>
-                        <p class="text-[11px] text-slate-400">Beban CPU & RAM Perangkat FSS (%)</p>
+                        <p class="text-[11px] text-slate-400">Persentase beban sistem (%)</p>
                     </div>
-                    <button onclick="clearChart(resourceChart)"
+                    <button onclick="clearSingleChart(hardwareChart)"
                         class="px-2 py-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition">
                         Clear
                     </button>
                 </div>
-                <!-- Container canvas dengan tinggi eksplisit dan position relative -->
-                <div class="relative w-full h-[280px] sm:h-[320px]">
-                    <canvas id="resourceChart"></canvas>
+                <div class="relative w-full h-[280px]">
+                    <canvas id="hardwareChart"></canvas>
                 </div>
             </div>
 
         </div>
 
-
-        <!-- Raw Telemetry Payload Inspector -->
+        <!-- Section: Raw Telemetry Viewer -->
         <div class="glass-card p-5 space-y-3">
-            <button onclick="toggleDebugPanel()"
-                class="w-full flex items-center justify-between text-left text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200">
-                <span class="flex items-center gap-2">
-                    <i class="fa-solid fa-code text-indigo-400"></i> Raw Telemetry Payload Inspector
-                </span>
-                <i id="debugChevron" class="fa-solid fa-chevron-down transition-transform"></i>
-            </button>
-            <div id="debugPanel" class="hidden pt-2 border-t border-slate-800">
-                <pre id="rawPayload"
-                    class="bg-slate-950 p-4 rounded-xl text-xs font-mono text-emerald-400 overflow-x-auto border border-slate-800/80 max-h-60">Menunggu respons data telemetri FSS...</pre>
+            <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-code text-purple-400 text-sm"></i>
+                    <h3 class="font-bold text-sm text-white">Raw Telemetry Data</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span
+                        class="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-1 rounded border border-slate-700">JSON
+                        Payload</span>
+                    <!-- Tombol Minimize / Expand -->
+                    <button onclick="toggleRawTelemetry()" id="btnToggleRaw" title="Minimize / Expand"
+                        class="p-1 px-2 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-xs transition flex items-center gap-1">
+                        <i id="iconToggleRaw" class="fa-solid fa-chevron-up transition-transform duration-200"></i>
+                        <span id="textToggleRaw" class="text-[10px] hidden sm:inline">Minimize</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Container Code Block -->
+            <div id="rawTelemetryContainer" class="transition-all duration-300 overflow-hidden">
+                <pre id="rawTelemetryCode"
+                    class="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-emerald-400 overflow-x-auto max-h-60 leading-relaxed">Waiting for data...</pre>
             </div>
         </div>
+        
 
     </main>
 
     <!-- Config Modal -->
     <div id="configModal"
-        class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
-            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+        class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-slate-700/80 flex items-center justify-between bg-slate-850">
                 <div class="flex items-center gap-2.5">
-                    <div class="p-2 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    <div class="p-2 rounded-lg bg-purple-500/10 text-purple-400">
                         <i class="fa-solid fa-sliders text-base"></i>
                     </div>
                     <div>
-                        <h3 class="font-bold text-base text-white">Konfigurasi FSS API</h3>
-                        <p class="text-xs text-slate-400">Atur Host REST API & Login Mastify</p>
+                        <h3 class="font-bold text-base text-white">Konfigurasi FSS Single Device</h3>
+                        <p class="text-xs text-slate-400">Pengaturan Host, Login, & Target Device</p>
                     </div>
                 </div>
                 <button onclick="closeConfigModal()" class="text-slate-400 hover:text-white p-1 rounded-lg transition">
@@ -293,80 +301,85 @@
                 </button>
             </div>
 
-            <form id="configForm" onsubmit="handleLoginSubmit(event)" class="p-5 space-y-4">
+            <form id="configForm" onsubmit="handleConfigSubmit(event)" class="p-5 space-y-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Base Host URL</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Base Host URL</label>
                     <input type="text" id="inputBaseUrl"
-                        class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-purple-500 transition font-mono"
+                        class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500 transition font-mono"
                         placeholder="http://178.128.107.238:8080">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">FSS Device ID</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Target Device ID</label>
                     <input type="text" id="inputDeviceId" required
-                        class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-purple-500 transition font-mono"
-                        placeholder="Device ID">
+                        class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-purple-300 font-mono focus:outline-none focus:border-purple-500 transition"
+                        placeholder="Masukkan Device ID FSS">
                 </div>
 
-                <div class="border-t border-slate-800 pt-2">
+                <div class="border-t border-slate-700/80 pt-3">
                     <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Kredensial Login</span>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Username / Email</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Username / Email</label>
                     <input type="text" id="inputUsername" required
-                        class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-purple-500 transition"
+                        class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500 transition"
                         placeholder="Username Mastify">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Password</label>
                     <input type="password" id="inputPassword" required
-                        class="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-slate-100 focus:outline-none focus:border-purple-500 transition"
+                        class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-200 focus:outline-none focus:border-purple-500 transition"
                         placeholder="••••••••">
                 </div>
 
                 <div class="pt-2 flex items-center justify-end gap-2">
                     <button type="button" onclick="closeConfigModal()"
-                        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs rounded-lg transition">
+                        class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium text-xs rounded-lg transition">
                         Batal
                     </button>
                     <button type="submit" id="loginSubmitBtn"
-                        class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs rounded-lg transition shadow-md shadow-purple-600/30 flex items-center gap-2">
+                        class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-xs rounded-lg transition shadow-md shadow-purple-600/30 flex items-center gap-2">
                         <i class="fa-solid fa-right-to-bracket"></i>
-                        <span id="loginBtnText">Login & Connect</span>
+                        <span id="loginBtnText">Simpan & Login</span>
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Toast Notifications -->
+    <!-- Toast Container -->
     <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <script>
-        const CONFIG_KEY = 'FSS_CONFIG_V2';
+        const CONFIG_KEY = 'FSS_CONFIG_V1_DARK';
+
         let config = {
             baseUrl: window.location.protocol === 'https:' ? '' : 'http://178.128.107.238:8080',
             deviceId: '',
+            deviceName: '',
+            deviceType: '',
             token: '',
             username: ''
         };
 
         let pollingInterval = null;
         let isPollingActive = true;
+
         let fuelChart = null;
-        let resourceChart = null;
-        const maxDataPoints = 25;
+        let hardwareChart = null;
+        const maxDataPoints = 20;
 
         window.onload = function () {
             loadSavedConfig();
-            initCharts();
+            initDarkCharts();
             updateUIState();
 
-            if (config.token) {
-                startPolling();
+            if (config.token && config.deviceId) {
+                fetchDeviceInfo();
                 fetchTelemetry();
+                startPolling();
             } else {
                 openConfigModal();
             }
@@ -384,94 +397,38 @@
             document.getElementById('inputBaseUrl').value = config.baseUrl || '';
             document.getElementById('inputDeviceId').value = config.deviceId || '';
             document.getElementById('inputUsername').value = config.username || '';
+
+            document.getElementById('displayDeviceId').textContent = config.deviceId || 'Belum Di-set';
+            document.getElementById('displayDeviceName').textContent = config.deviceName || config.deviceId || 'Unknown';
+            document.getElementById('displayDeviceType').textContent = config.deviceType || 'FSS';
         }
 
         function saveConfig() {
             localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
         }
 
-        // Helper untuk menghasilkan URL API yang kompatibel dengan Vercel Reverse Proxy (HTTPS)
         function getApiUrl(endpoint) {
             const rawBaseUrl = (config.baseUrl || '').trim().replace(/\/+$/, "");
-            // Jika berjalan di HTTPS (Vercel) dan URL berawalan http://, gunakan endpoint relatif proxy
             if (window.location.protocol === 'https:' && rawBaseUrl.startsWith('http://')) {
                 return endpoint;
             }
             return rawBaseUrl ? `${rawBaseUrl}${endpoint}` : endpoint;
         }
 
-        function initCharts() {
-            // Chart 1: Fuel Usage Line Chart
-            const ctx1 = document.getElementById('fuelChart').getContext('2d');
-            const fuelGradient = ctx1.createLinearGradient(0, 0, 0, 250);
-            fuelGradient.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
-            fuelGradient.addColorStop(1, 'rgba(168, 85, 247, 0.0)');
-
-            fuelChart = new Chart(ctx1, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Used Fuel (Liters)',
-                        data: [],
-                        borderColor: '#a855f7',
-                        borderWidth: 2.5,
-                        backgroundColor: fuelGradient,
-                        fill: true,
-                        tension: 0.35,
-                        pointBackgroundColor: '#c084fc',
-                        pointRadius: 3
-                    }]
-                },
-                options: getCommonChartOptions()
-            });
-
-            // Chart 2: Multi-Line Hardware Usage
-            const ctx2 = document.getElementById('resourceChart').getContext('2d');
-            resourceChart = new Chart(ctx2, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            label: 'CPU Usage (%)',
-                            data: [],
-                            borderColor: '#3b82f6',
-                            borderWidth: 2,
-                            backgroundColor: 'transparent',
-                            tension: 0.3,
-                            pointRadius: 3
-                        },
-                        {
-                            label: 'RAM Usage (%)',
-                            data: [],
-                            borderColor: '#6366f1',
-                            borderWidth: 2,
-                            backgroundColor: 'transparent',
-                            tension: 0.3,
-                            pointRadius: 3
-                        }
-                    ]
-                },
-                options: getCommonChartOptions(100)
-            });
-        }
-
-        function getCommonChartOptions(maxLimit = null) {
-            return {
+        function initDarkCharts() {
+            const chartOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 300 },
                 scales: {
                     x: {
-                        grid: { color: 'rgba(51, 65, 85, 0.2)' },
+                        grid: { color: 'rgba(51, 65, 85, 0.3)' },
                         ticks: { color: '#94a3b8', font: { size: 10 } }
                     },
                     y: {
-                        grid: { color: 'rgba(51, 65, 85, 0.2)' },
+                        grid: { color: 'rgba(51, 65, 85, 0.3)' },
                         ticks: { color: '#94a3b8', font: { size: 10 } },
-                        beginAtZero: true,
-                        max: maxLimit
+                        beginAtZero: true
                     }
                 },
                 plugins: {
@@ -480,9 +437,88 @@
                     }
                 }
             };
+
+            // Chart Fuel (Solid Point / Titik Terisi Penuh)
+            const ctx1 = document.getElementById('fuelChart').getContext('2d');
+            fuelChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Used Fuel (L)',
+                        data: [],
+                        borderColor: '#a855f7',
+                        backgroundColor: 'rgba(168, 85, 247, 0.15)',
+                        fill: true,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#a855f7', // Solid Point
+                        pointBorderColor: '#a855f7',     // Tanpa lubang transparan
+                        pointStyle: 'circle'
+                    }]
+                },
+                options: chartOptions
+            });
+
+            // Chart Hardware (CPU & RAM)
+            const ctx2 = document.getElementById('hardwareChart').getContext('2d');
+            hardwareChart = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'CPU (%)',
+                            data: [],
+                            borderColor: '#3b82f6',
+                            backgroundColor: '#3b82f6',
+                            pointBackgroundColor: '#3b82f6',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            pointRadius: 3
+                        },
+                        {
+                            label: 'RAM (%)',
+                            data: [],
+                            borderColor: '#6366f1',
+                            backgroundColor: '#6366f1',
+                            pointBackgroundColor: '#6366f1',
+                            borderWidth: 2,
+                            tension: 0.3,
+                            pointRadius: 3
+                        }
+                    ]
+                },
+                options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, max: 100 } } }
+            });
         }
 
-        async function handleLoginSubmit(event) {
+        async function fetchDeviceInfo() {
+            if (!config.token || !config.deviceId) return;
+            try {
+                const endpoint = `/api/device/${config.deviceId}`;
+                const url = getApiUrl(endpoint);
+                const response = await fetch(url, {
+                    headers: { 'X-Authorization': `Bearer ${config.token}` }
+                });
+
+                if (response.ok) {
+                    const devData = await response.json();
+                    config.deviceName = devData.name || devData.label || config.deviceId;
+                    config.deviceType = devData.type || 'Fuel Self Service';
+                    saveConfig();
+
+                    document.getElementById('displayDeviceName').textContent = config.deviceName;
+                    document.getElementById('displayDeviceType').textContent = config.deviceType;
+                }
+            } catch (err) {
+                console.warn("Gagal mengambil nama & type device:", err);
+            }
+        }
+
+        async function handleConfigSubmit(event) {
             event.preventDefault();
             const baseUrl = document.getElementById('inputBaseUrl').value.trim().replace(/\/+$/, "");
             const deviceId = document.getElementById('inputDeviceId').value.trim();
@@ -513,6 +549,10 @@
                 const data = await response.json();
                 config.username = username;
                 config.token = data.token;
+
+                document.getElementById('displayDeviceId').textContent = deviceId;
+
+                await fetchDeviceInfo();
                 saveConfig();
 
                 showToast("Login Berhasil!", "success");
@@ -524,51 +564,42 @@
                 showToast(err.message, "error");
             } finally {
                 submitBtn.disabled = false;
-                btnText.textContent = "Login & Connect";
+                btnText.textContent = "Simpan & Login";
             }
         }
 
         async function fetchTelemetry() {
-            if (!config.token) {
-                setConnectionStatus("offline", "No Token");
-                return;
-            }
-
-            if (!config.deviceId) {
-                setConnectionStatus("offline", "No Device ID");
-                showToast("Device ID belum diisi. Silakan atur di Config.", "error");
-                return;
-            }
+            if (!config.token || !config.deviceId) return;
 
             document.getElementById('refreshIcon').classList.add('fa-spin');
+            const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
             try {
                 const endpoint = `/api/plugins/telemetry/DEVICE/${config.deviceId}/values/timeseries?keys=used_fuel,cpu_usage,ram_usage,status`;
-                const telemetryUrl = getApiUrl(endpoint);
+                const url = getApiUrl(endpoint);
 
-                const response = await fetch(telemetryUrl, {
+                const response = await fetch(url, {
                     headers: { 'X-Authorization': `Bearer ${config.token}` }
                 });
 
                 if (response.status === 401 || response.status === 403) {
-                    throw new Error("Sesi token habis. Silakan login kembali.");
+                    throw new Error("Sesi token berakhir. Silakan login ulang.");
                 }
 
-                if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+                if (!response.ok) throw new Error("Gagal mengambil data telemetri.");
 
-                const data = await response.json();
-                parseAndUpdateDashboard(data);
+                const payload = await response.json();
+
+                // Tampilkan Raw Telemetry ke UI
+                document.getElementById('rawTelemetryCode').textContent = JSON.stringify(payload, null, 2);
+
+                updateSingleTelemetryUI(payload, timeLabel);
                 setConnectionStatus("online", "Connected");
 
             } catch (err) {
-                console.error(err);
+                console.error("Fetch Error:", err);
                 setConnectionStatus("offline", "Error");
-                if (err.message.includes("Sesi token")) {
-                    config.token = '';
-                    saveConfig();
-                    updateUIState();
-                }
-                showToast(err.message, "error");
+                document.getElementById('rawTelemetryCode').textContent = `// Error: ${err.message}`;
             } finally {
                 setTimeout(() => {
                     document.getElementById('refreshIcon').classList.remove('fa-spin');
@@ -576,61 +607,54 @@
             }
         }
 
-        function parseAndUpdateDashboard(payload) {
-            document.getElementById('rawPayload').textContent = JSON.stringify(payload, null, 2);
-            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        function updateSingleTelemetryUI(payload, timeLabel) {
+            document.getElementById('lastUpdatedText').textContent = timeLabel;
 
             // 1. Used Fuel
             let fuelVal = 0;
             if (payload.used_fuel && payload.used_fuel.length > 0) {
                 fuelVal = parseFloat(payload.used_fuel[0].value) || 0;
-                document.getElementById('fuelValue').textContent = fuelVal.toFixed(2);
-                document.getElementById('fuelTime').textContent = new Date(payload.used_fuel[0].ts).toLocaleTimeString();
+                document.getElementById('valFuel').textContent = fuelVal.toFixed(2);
             }
 
             // 2. Status
             if (payload.status && payload.status.length > 0) {
-                const rawStatus = String(payload.status[0].value).toUpperCase();
-                const statusBadge = document.getElementById('statusBadge');
-                document.getElementById('statusTime').textContent = new Date(payload.status[0].ts).toLocaleTimeString();
-
-                statusBadge.textContent = rawStatus;
-                if (["ACTIVE", "READY", "DISPENSING", "RUNNING", "1", "TRUE"].includes(rawStatus)) {
-                    statusBadge.className = "badge-status badge-active text-sm px-3 py-1";
-                } else if (["INACTIVE", "OFFLINE", "STOPPED", "0", "FALSE"].includes(rawStatus)) {
-                    statusBadge.className = "badge-status badge-inactive text-sm px-3 py-1";
+                const statusVal = String(payload.status[0].value).toUpperCase();
+                const badge = document.getElementById('valStatus');
+                badge.textContent = statusVal;
+                if (["ACTIVE", "READY", "DISPENSING", "RUNNING", "1", "TRUE"].includes(statusVal)) {
+                    badge.className = "badge-status badge-active";
                 } else {
-                    statusBadge.className = "badge-status badge-warning text-sm px-3 py-1";
+                    badge.className = "badge-status badge-inactive";
                 }
             }
 
-            // 3. CPU Usage
+            // 3. CPU Usage (Diubah Menjadi Angka Besar)
             let cpuVal = 0;
             if (payload.cpu_usage && payload.cpu_usage.length > 0) {
                 cpuVal = parseFloat(payload.cpu_usage[0].value) || 0;
-                document.getElementById('cpuValue').textContent = cpuVal.toFixed(1);
-                document.getElementById('cpuBar').style.width = `${Math.min(100, cpuVal)}%`;
-                document.getElementById('cpuTime').textContent = new Date(payload.cpu_usage[0].ts).toLocaleTimeString();
+                document.getElementById('valCpu').textContent = cpuVal.toFixed(1);
+                document.getElementById('barCpu').style.width = `${Math.min(100, cpuVal)}%`;
             }
 
-            // 4. RAM Usage
+            // 4. RAM Usage (Diubah Menjadi Angka Besar)
             let ramVal = 0;
             if (payload.ram_usage && payload.ram_usage.length > 0) {
                 ramVal = parseFloat(payload.ram_usage[0].value) || 0;
-                document.getElementById('ramValue').textContent = ramVal.toFixed(1);
-                document.getElementById('ramBar').style.width = `${Math.min(100, ramVal)}%`;
-                document.getElementById('ramTime').textContent = new Date(payload.ram_usage[0].ts).toLocaleTimeString();
+                document.getElementById('valRam').textContent = ramVal.toFixed(1);
+                document.getElementById('barRam').style.width = `${Math.min(100, ramVal)}%`;
             }
 
-            // Update Realtime Charts
-            updateCharts(timestamp, fuelVal, cpuVal, ramVal);
+            // Update Single Device Charts
+            updateChartsData(timeLabel, fuelVal, cpuVal, ramVal);
         }
 
-        function updateCharts(timeLabel, fuel, cpu, ram) {
-            // Fuel Chart Update
+        function updateChartsData(label, fuel, cpu, ram) {
+            // Fuel Chart
             if (fuelChart) {
-                fuelChart.data.labels.push(timeLabel);
+                fuelChart.data.labels.push(label);
                 fuelChart.data.datasets[0].data.push(fuel);
+
                 if (fuelChart.data.labels.length > maxDataPoints) {
                     fuelChart.data.labels.shift();
                     fuelChart.data.datasets[0].data.shift();
@@ -638,21 +662,22 @@
                 fuelChart.update('none');
             }
 
-            // Resource Chart Update
-            if (resourceChart) {
-                resourceChart.data.labels.push(timeLabel);
-                resourceChart.data.datasets[0].data.push(cpu);
-                resourceChart.data.datasets[1].data.push(ram);
-                if (resourceChart.data.labels.length > maxDataPoints) {
-                    resourceChart.data.labels.shift();
-                    resourceChart.data.datasets[0].data.shift();
-                    resourceChart.data.datasets[1].data.shift();
+            // Hardware Chart
+            if (hardwareChart) {
+                hardwareChart.data.labels.push(label);
+                hardwareChart.data.datasets[0].data.push(cpu);
+                hardwareChart.data.datasets[1].data.push(ram);
+
+                if (hardwareChart.data.labels.length > maxDataPoints) {
+                    hardwareChart.data.labels.shift();
+                    hardwareChart.data.datasets[0].data.shift();
+                    hardwareChart.data.datasets[1].data.shift();
                 }
-                resourceChart.update('none');
+                hardwareChart.update('none');
             }
         }
 
-        function clearChart(chart) {
+        function clearSingleChart(chart) {
             if (chart) {
                 chart.data.labels = [];
                 chart.data.datasets.forEach(ds => ds.data = []);
@@ -689,7 +714,7 @@
             const icon = document.getElementById('pollingIcon');
             const text = document.getElementById('pollingText');
             if (isPollingActive) {
-                icon.className = "fa-solid fa-pause text-amber-400";
+                icon.className = "fa-solid fa-pause text-amber-500";
                 if (text) text.textContent = "Auto 5s";
             } else {
                 icon.className = "fa-solid fa-play text-emerald-400";
@@ -703,7 +728,6 @@
             const text = document.getElementById('connectionText');
 
             text.textContent = label || status;
-
             if (status === 'online') {
                 badge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
                 dot.className = "pulse-dot pulse-dot-online";
@@ -740,32 +764,26 @@
         }
 
         function closeConfigModal() {
+            document.getElementById('configModal').classList.hidden = true;
             document.getElementById('configModal').classList.add('hidden');
-        }
-
-        function toggleDebugPanel() {
-            const panel = document.getElementById('debugPanel');
-            const chevron = document.getElementById('debugChevron');
-            panel.classList.toggle('hidden');
-            chevron.classList.toggle('rotate-180');
         }
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
 
-            let bgClass = "bg-slate-900 border-slate-700 text-slate-100";
+            let bgClass = "bg-slate-800 border-slate-700 text-slate-200 shadow-xl";
             let iconClass = "fa-circle-info text-blue-400";
 
             if (type === 'success') {
-                bgClass = "bg-emerald-950/90 border-emerald-800 text-emerald-200";
+                bgClass = "bg-emerald-950 border-emerald-800 text-emerald-200 shadow-xl";
                 iconClass = "fa-circle-check text-emerald-400";
             } else if (type === 'error') {
-                bgClass = "bg-rose-950/90 border-rose-800 text-rose-200";
+                bgClass = "bg-rose-950 border-rose-800 text-rose-200 shadow-xl";
                 iconClass = "fa-circle-xmark text-rose-400";
             }
 
-            toast.className = `pointer-events-auto p-3.5 rounded-xl border shadow-xl flex items-center gap-3 text-xs font-medium transition-all transform translate-y-2 opacity-0 ${bgClass}`;
+            toast.className = `pointer-events-auto p-3.5 rounded-xl border flex items-center gap-3 text-xs font-medium transition-all transform translate-y-2 opacity-0 ${bgClass}`;
             toast.innerHTML = `<i class="fa-solid ${iconClass} text-base"></i><span>${message}</span>`;
 
             container.appendChild(toast);
@@ -779,7 +797,24 @@
                 setTimeout(() => toast.remove(), 300);
             }, 3500);
         }
+        
+        function toggleRawTelemetry() {
+                const container = document.getElementById('rawTelemetryContainer');
+                const icon = document.getElementById('iconToggleRaw');
+                const text = document.getElementById('textToggleRaw');
 
+                if (container.classList.contains('hidden')) {
+                    // Sembunyikan -> Tampilkan (Expand)
+                    container.classList.remove('hidden');
+                    icon.className = "fa-solid fa-chevron-up transition-transform duration-200";
+                    if (text) text.textContent = "Minimize";
+                } else {
+                    // Tampilkan -> Sembunyikan (Minimize)
+                    container.classList.add('hidden');
+                    icon.className = "fa-solid fa-chevron-down transition-transform duration-200";
+                    if (text) text.textContent = "Expand";
+                }
+            }
     </script>
 </body>
 

@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FSS Multi-Device Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Custom Shared CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body
+    class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Title -->
+                <div class="flex items-center gap-3">
+                    <div class="bg-gradient-to-tr from-indigo-600 to-purple-600 p-2.5 rounded-xl shadow-sm text-white">
+                        <i class="fa-solid fa-layer-group text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight tracking-tight text-slate-900">FSS Multi-Device Dashboard
+                        </h1>
+                        <p class="text-xs text-slate-500 font-medium">Fuel Self Service Monitoring</p>
+                    </div>
+                </div>
+
+                <!-- Status & Action Controls -->
+                <div class="flex items-center gap-3">
+                    <!-- Connection Badge -->
+                    <div id="connectionBadge"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                        <span id="connectionDot" class="pulse-dot pulse-dot-offline"></span>
+                        <span id="connectionText">Disconnected</span>
+                    </div>
+
+                    <!-- Polling Toggle -->
+                    <button id="togglePollingBtn" onclick="togglePolling()" title="Pause/Resume Auto Polling"
+                        class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-sm transition">
+                        <i id="pollingIcon" class="fa-solid fa-pause text-amber-500"></i>
+                        <span id="pollingText" class="hidden md:inline">Auto 5s</span>
+                    </button>
+
+                    <!-- Manual Refresh Button -->
+                    <button id="refreshBtn" onclick="fetchAllDevicesTelemetry()" title="Refresh Data Now"
+                        class="p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition shadow-sm active:scale-95">
+                        <i id="refreshIcon" class="fa-solid fa-rotate"></i>
+                        <span class="hidden sm:inline ml-1.5">Refresh</span>
+                    </button>
+
+                    <!-- Config / Login Modal Trigger -->
+                    <button onclick="openConfigModal()" title="API & Credentials"
+                        class="p-2 sm:px-3 sm:py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-sm transition">
+                        <i class="fa-solid fa-gear"></i>
+                        <span class="hidden md:inline ml-1.5">Config</span>
+                    </button>
+
+                    <!-- Logout Button -->
+                    <button id="logoutBtn" onclick="logout()" title="Logout"
+                        class="hidden p-2 rounded-lg text-xs font-medium bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Banner Alert Authentication -->
+        <div id="authAlert"
+            class="hidden p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-start gap-3 shadow-sm">
+            <i class="fa-solid fa-circle-exclamation text-lg mt-0.5 text-amber-600"></i>
+            <div class="flex-1">
+                <h4 class="font-semibold text-amber-900">Autentikasi Diperlukan</h4>
+                <p class="text-xs text-amber-700 mt-0.5">Silakan isi kredensial login Thingsboard/Mastify untuk memuat
+                    daftar perangkat FSS.</p>
+            </div>
+            <button onclick="openConfigModal()"
+                class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs rounded-lg transition shadow-sm">
+                Login Now
+            </button>
+        </div>
+
+        <!-- Section: Selection & Filter Device (All Compact Grid tanpa Pagination) -->
+        <div class="glass-card p-4 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                        <i class="fa-solid fa-sliders text-xs"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-xs text-slate-800">Filter Perangkat FSS</h3>
+                        <p class="text-[10px] text-slate-500">Diurutkan berdasarkan yang paling aktif</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <button onclick="selectAllDevices()"
+                        class="px-2 py-1 text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg border border-indigo-200 transition">
+                        Select All
+                    </button>
+                    <button onclick="clearAllSelections()"
+                        class="px-2 py-1 text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg border border-slate-200 transition">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Compact Checkbox Grid -->
+            <div id="deviceCheckboxGrid"
+                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-48 overflow-y-auto pr-1">
+                <div class="col-span-full py-4 text-center text-xs text-slate-400">
+                    <i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat daftar perangkat...
+                </div>
+            </div>
+        </div>
+
+        <!-- Section: Grid Telemetri Device (Fleksibel: jika ganjil/1 device, card terakhir memanjang) -->
+        <div id="devicesCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <!-- Cards Telemetri Device akan di-render dinamis oleh JavaScript -->
+        </div>
+
+        <!-- Section: Real-time Multi-Device Comparative Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            <!-- Chart 1: Used Fuel Multi-Device -->
+            <div class="glass-card p-5 flex flex-col justify-between">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line text-indigo-600"></i>
+                            Perbandingan BBM (Used Fuel)
+                        </h3>
+                        <p class="text-[11px] text-slate-500">Tren BBM real-time tiap perangkat FSS (Litres)</p>
+                    </div>
+                    <button onclick="clearChart(fuelChart)"
+                        class="px-2 py-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg border border-slate-200 transition">
+                        Clear
+                    </button>
+                </div>
+                <div class="relative w-full h-[320px]">
+                    <canvas id="fuelChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Hardware Load (CPU & RAM) Multi-Device -->
+            <div class="glass-card p-5 flex flex-col justify-between">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-area text-purple-600"></i>
+                            Beban Hardware (CPU & RAM)
+                        </h3>
+                        <p class="text-[11px] text-slate-500">Beban sistem (%) — Garis Tegas: CPU | Garis Putus: RAM</p>
+                    </div>
+                    <button onclick="clearChart(hardwareChart)"
+                        class="px-2 py-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg border border-slate-200 transition">
+                        Clear
+                    </button>
+                </div>
+                <div class="relative w-full h-[320px]">
+                    <canvas id="hardwareChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Section: Combined Raw Telemetry Viewer (Collapsible / Minimize) -->
+        <div class="glass-card p-5 space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-code text-indigo-600 text-sm"></i>
+                    <h3 class="font-bold text-sm text-slate-800">Raw Telemetry Data (All Selected Devices)</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span
+                        class="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded border border-slate-200">Combined
+                        JSON</span>
+                    <!-- Tombol Minimize / Expand -->
+                    <button onclick="toggleRawTelemetry()" id="btnToggleRaw" title="Minimize / Expand"
+                        class="p-1 px-2 text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 text-xs transition flex items-center gap-1">
+                        <i id="iconToggleRaw" class="fa-solid fa-chevron-up transition-transform duration-200"></i>
+                        <span id="textToggleRaw" class="text-[10px] hidden sm:inline">Minimize</span>
+                    </button>
+                </div>
+            </div>
+            <!-- Container Code Block -->
+            <div id="rawTelemetryContainer" class="transition-all duration-300 overflow-hidden">
+                <pre id="rawTelemetryCode"
+                    class="p-4 rounded-xl bg-slate-900 font-mono text-xs text-emerald-400 overflow-x-auto max-h-64 leading-relaxed">Waiting for data...</pre>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Config Modal -->
+    <div id="configModal"
+        class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                        <i class="fa-solid fa-key text-base"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-base text-slate-800">Konfigurasi FSS Dashboard</h3>
+                        <p class="text-xs text-slate-500">Pengaturan Host & Kredensial User</p>
+                    </div>
+                </div>
+                <button onclick="closeConfigModal()"
+                    class="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="configForm" onsubmit="handleConfigSubmit(event)" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Base Host URL</label>
+                    <input type="text" id="inputBaseUrl"
+                        class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500 transition font-mono"
+                        placeholder="http://178.128.107.238:8080">
+                </div>
+
+                <div class="border-t border-slate-100 pt-3">
+                    <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Kredensial Login</span>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Username / Email</label>
+                    <input type="text" id="inputUsername" required
+                        class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500 transition"
+                        placeholder="Username Mastify">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                    <input type="password" id="inputPassword" required
+                        class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:border-indigo-500 transition"
+                        placeholder="••••••••">
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeConfigModal()"
+                        class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-lg transition">
+                        Batal
+                    </button>
+                    <button type="submit" id="loginSubmitBtn"
+                        class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-lg transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span id="loginBtnText">Simpan & Login</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        const CONFIG_KEY = 'FSS_CONFIG_V2_LIGHT';
+
+        let config = {
+            baseUrl: window.location.protocol === 'https:' ? '' : 'http://178.128.107.238:8080',
+            token: '',
+            username: ''
+        };
+
+        let availableDevices = [];      // Array semua FSS device
+        let selectedDeviceIds = [];     // Device yang sedang tercentang
+        let combinedRawTelemetry = {};  // Object penampung raw telemetry per device
+
+        let pollingInterval = null;
+        let isPollingActive = true;
+
+        let fuelChart = null;
+        let hardwareChart = null;
+        const maxDataPoints = 20;
+
+        // Palet Warna Kontras & Variatif untuk Multi-Device
+        const colorPalette = [
+            { border: '#6366f1', fill: 'rgba(99, 102, 241, 0.12)' },  // Indigo
+            { border: '#06b6d4', fill: 'rgba(6, 182, 212, 0.12)' },   // Cyan
+            { border: '#10b981', fill: 'rgba(16, 185, 129, 0.12)' },  // Emerald
+            { border: '#f59e0b', fill: 'rgba(245, 158, 11, 0.12)' },  // Amber
+            { border: '#ec4899', fill: 'rgba(236, 72, 153, 0.12)' },  // Pink
+            { border: '#8b5cf6', fill: 'rgba(139, 92, 246, 0.12)' },  // Purple
+            { border: '#ef4444', fill: 'rgba(239, 68, 68, 0.12)' },   // Red
+            { border: '#14b8a6', fill: 'rgba(20, 184, 166, 0.12)' },  // Teal
+            { border: '#3b82f6', fill: 'rgba(59, 130, 246, 0.12)' },  // Blue
+            { border: '#84cc16', fill: 'rgba(132, 204, 22, 0.12)' }   // Lime
+        ];
+
+        window.onload = function () {
+            loadSavedConfig();
+            initCharts();
+            updateUIState();
+
+            if (config.token) {
+                fetchDevicesList();
+                startPolling();
+            } else {
+                openConfigModal();
+            }
+        };
+
+        function loadSavedConfig() {
+            const saved = localStorage.getItem(CONFIG_KEY);
+            if (saved) {
+                try {
+                    config = { ...config, ...JSON.parse(saved) };
+                } catch (e) {
+                    console.error("Config parse error", e);
+                }
+            }
+            document.getElementById('inputBaseUrl').value = config.baseUrl || '';
+            document.getElementById('inputUsername').value = config.username || '';
+        }
+
+        function saveConfig() {
+            localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+        }
+
+        function getApiUrl(endpoint) {
+            const rawBaseUrl = (config.baseUrl || '').trim().replace(/\/+$/, "");
+            if (window.location.protocol === 'https:' && rawBaseUrl.startsWith('http://')) {
+                return endpoint;
+            }
+            return rawBaseUrl ? `${rawBaseUrl}${endpoint}` : endpoint;
+        }
+
+        function initCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 250 },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                        ticks: { color: '#64748b', font: { size: 10 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(226, 232, 240, 0.6)' },
+                        ticks: { color: '#64748b', font: { size: 10 } },
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            color: '#334155',
+                            font: { size: 10 },
+                            usePointStyle: true,
+                            boxWidth: 8
+                        }
+                    }
+                }
+            };
+
+            const ctx1 = document.getElementById('fuelChart').getContext('2d');
+            fuelChart = new Chart(ctx1, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: chartOptions
+            });
+
+            const ctx2 = document.getElementById('hardwareChart').getContext('2d');
+            hardwareChart = new Chart(ctx2, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, max: 100 } } }
+            });
+        }
+
+        async function fetchDevicesList() {
+            if (!config.token) return;
+            const grid = document.getElementById('deviceCheckboxGrid');
+
+            try {
+                const endpoint = '/api/user/devices?pageSize=100&page=0';
+                const url = getApiUrl(endpoint);
+
+                const response = await fetch(url, {
+                    headers: { 'X-Authorization': `Bearer ${config.token}` }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error("Sesi token berakhir. Silakan login ulang.");
+                }
+
+                if (!response.ok) throw new Error("Gagal mengambil daftar perangkat.");
+
+                const data = await response.json();
+                const rawList = data.data || [];
+
+                availableDevices = rawList.filter(dev => {
+                    const devType = (dev.type || '').trim().toLowerCase();
+                    return devType === 'fuel self service' || devType === 'fss';
+                });
+
+                if (availableDevices.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full py-4 text-center text-xs text-amber-600 bg-amber-50 rounded-xl border border-amber-200">
+                        Tidak ditemukan perangkat dengan tipe "Fuel Self Service".
+                    </div>`;
+                    document.getElementById('devicesCardsContainer').innerHTML = '';
+                    return;
+                }
+
+                // Cek status keaktifan di awal load untuk mengurutkan dari yang paling aktif
+                await sortDevicesByActivity();
+
+                // Select default 2 device teratas jika belum ada
+                if (selectedDeviceIds.length === 0) {
+                    selectedDeviceIds = availableDevices.slice(0, 2).map(d => d.id.id);
+                }
+
+                renderDeviceCheckboxes();
+                renderSelectedDeviceCards();
+                fetchAllDevicesTelemetry();
+
+            } catch (err) {
+                console.error(err);
+                grid.innerHTML = `<div class="col-span-full py-4 text-center text-xs text-rose-500 bg-rose-50 rounded-xl border border-rose-200">
+                    Error: ${err.message}
+                </div>`;
+            }
+        }
+
+        // Fungsi Sort Device berdasarkan Status Keaktifan di awal/refresh
+        async function sortDevicesByActivity() {
+            const checkPromises = availableDevices.map(async (dev) => {
+                try {
+                    const endpoint = `/api/plugins/telemetry/DEVICE/${dev.id.id}/values/timeseries?keys=status`;
+                    const res = await fetch(getApiUrl(endpoint), {
+                        headers: { 'X-Authorization': `Bearer ${config.token}` }
+                    });
+                    if (!res.ok) return { dev, active: false };
+                    const data = await res.json();
+                    let st = data.status && data.status.length > 0 ? String(data.status[0].value).toUpperCase() : '';
+                    let isActive = ["ACTIVE", "READY", "DISPENSING", "RUNNING", "1", "TRUE"].includes(st);
+                    return { dev, active: isActive };
+                } catch (e) {
+                    return { dev, active: false };
+                }
+            });
+
+            const results = await Promise.all(checkPromises);
+            // Pisahkan yang aktif di paling atas
+            results.sort((a, b) => (b.active === a.active) ? 0 : b.active ? 1 : -1);
+            availableDevices = results.map(r => r.dev);
+        }
+
+        function renderDeviceCheckboxes() {
+            const grid = document.getElementById('deviceCheckboxGrid');
+            grid.innerHTML = '';
+
+            availableDevices.forEach((dev) => {
+                const id = dev.id.id;
+                const name = dev.name || dev.label || id;
+                const isChecked = selectedDeviceIds.includes(id);
+
+                const item = document.createElement('label');
+                item.className = `flex items-center gap-2 p-2 rounded-lg border transition cursor-pointer text-xs font-medium ${isChecked ? 'bg-indigo-50/80 border-indigo-200 text-indigo-900 shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`;
+
+                item.innerHTML = `
+                    <input type="checkbox" value="${id}" ${isChecked ? 'checked' : ''} 
+                        onchange="toggleDeviceSelection('${id}')" 
+                        class="w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300">
+                    <span class="truncate font-semibold text-[11px]">${name}</span>
+                `;
+                grid.appendChild(item);
+            });
+        }
+
+        function selectAllDevices() {
+            selectedDeviceIds = availableDevices.map(d => d.id.id);
+            renderDeviceCheckboxes();
+            renderSelectedDeviceCards();
+            fetchAllDevicesTelemetry();
+        }
+
+        function clearAllSelections() {
+            selectedDeviceIds = [];
+            combinedRawTelemetry = {};
+            document.getElementById('rawTelemetryCode').textContent = "// No device selected";
+            renderDeviceCheckboxes();
+            renderSelectedDeviceCards();
+            resetCharts();
+        }
+
+        function toggleDeviceSelection(id) {
+            if (selectedDeviceIds.includes(id)) {
+                selectedDeviceIds = selectedDeviceIds.filter(item => item !== id);
+                delete combinedRawTelemetry[id];
+            } else {
+                selectedDeviceIds.push(id);
+            }
+
+            renderDeviceCheckboxes();
+            renderSelectedDeviceCards();
+            fetchAllDevicesTelemetry();
+        }
+
+        // Render Card Telemetri Device dengan Layout Fleksibel & Status Badge
+        function renderSelectedDeviceCards() {
+            const container = document.getElementById('devicesCardsContainer');
+            container.innerHTML = '';
+
+            const totalSelected = selectedDeviceIds.length;
+
+            if (totalSelected === 0) {
+                container.innerHTML = `<div class="col-span-full glass-card p-8 text-center text-slate-400 text-xs">
+                    Silakan centang minimal satu perangkat FSS pada filter di atas untuk menampilkan telemetri.
+                </div>`;
+                return;
+            }
+
+            selectedDeviceIds.forEach((id, index) => {
+                const dev = availableDevices.find(d => d.id.id === id) || { name: id, type: 'FSS' };
+                const devName = dev.name || dev.label || id;
+
+                // Jika ganjil dan ini elemen terakhir, atau jika cuma ada 1 device => span 2 kolom (memanjang 1 baris)
+                const isLastAndOdd = (totalSelected % 2 !== 0) && (index === totalSelected - 1);
+                const colSpanClass = isLastAndOdd ? "md:col-span-2" : "";
+
+                const card = document.createElement('div');
+                card.id = `card-device-${id}`;
+                card.className = `glass-card p-5 space-y-4 flex flex-col justify-between border border-slate-200/80 shadow-sm hover:shadow-md transition ${colSpanClass}`;
+
+                card.innerHTML = `
+                    <!-- Device Card Header (Hanya Nama dan ID) -->
+                    <div class="flex items-center gap-2.5 border-b border-slate-100 pb-3">
+                        <div class="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex-shrink-0">
+                            <i class="fa-solid fa-gas-pump text-base"></i>
+                        </div>
+                        <div class="truncate">
+                            <h4 class="font-bold text-sm text-slate-800 truncate">${devName}</h4>
+                            <p class="text-[10px] font-mono text-slate-400 truncate">${id}</p>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Grid 2x2 inside Card -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Used Fuel -->
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Used Fuel</span>
+                            <div class="flex items-baseline gap-1">
+                                <span id="val-fuel-${id}" class="text-2xl font-extrabold text-slate-900">--</span>
+                                <span class="text-xs text-slate-500 font-medium">L</span>
+                            </div>
+                        </div>
+
+                        <!-- Status System (Output berupa Badge seperti di Judul) -->
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1 flex flex-col justify-between">
+                            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Status System</span>
+                            <div class="mt-1">
+                                <span id="badge-status-${id}" class="badge-status badge-neutral">UNKNOWN</span>
+                            </div>
+                        </div>
+
+                        <!-- CPU Usage -->
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                            <div class="flex justify-between items-center text-[10px] text-slate-400 font-semibold uppercase">
+                                <span>CPU Usage</span>
+                                <span id="val-cpu-${id}" class="text-blue-600 font-bold font-mono">--%</span>
+                            </div>
+                            <div class="progress-track h-1.5 mt-1">
+                                <div id="bar-cpu-${id}" class="progress-fill bg-blue-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- RAM Usage -->
+                        <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                            <div class="flex justify-between items-center text-[10px] text-slate-400 font-semibold uppercase">
+                                <span>RAM Usage</span>
+                                <span id="val-ram-${id}" class="text-purple-600 font-bold font-mono">--%</span>
+                            </div>
+                            <div class="progress-track h-1.5 mt-1">
+                                <div id="bar-ram-${id}" class="progress-fill bg-purple-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Footer Timestamp -->
+                    <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                        <span>Updated: <span id="time-${id}" class="font-mono text-slate-600 font-semibold">--:--:--</span></span>
+                        <span id="warning-${id}" class="text-rose-500 font-medium hidden"><i class="fa-solid fa-triangle-exclamation"></i> Non-FSS Telemetry</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function fetchAllDevicesTelemetry() {
+            if (!config.token || selectedDeviceIds.length === 0) return;
+
+            document.getElementById('refreshIcon').classList.add('fa-spin');
+            const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            const telemetryPromises = selectedDeviceIds.map(async (id) => {
+                try {
+                    const endpoint = `/api/plugins/telemetry/DEVICE/${id}/values/timeseries?keys=used_fuel,cpu_usage,ram_usage,status`;
+                    const url = getApiUrl(endpoint);
+
+                    const response = await fetch(url, {
+                        headers: { 'X-Authorization': `Bearer ${config.token}` }
+                    });
+
+                    if (!response.ok) return { id, error: true };
+                    const data = await response.json();
+                    return { id, data, timeLabel };
+                } catch (err) {
+                    return { id, error: true };
+                }
+            });
+
+            const results = await Promise.all(telemetryPromises);
+
+            results.forEach(res => {
+                if (res.data) {
+                    combinedRawTelemetry[res.id] = res.data;
+                }
+            });
+
+            document.getElementById('rawTelemetryCode').textContent = JSON.stringify(combinedRawTelemetry, null, 2);
+
+            updateMultiDevicesUI(results);
+            setConnectionStatus("online", "Connected");
+
+            setTimeout(() => {
+                document.getElementById('refreshIcon').classList.remove('fa-spin');
+            }, 400);
+        }
+
+        function updateMultiDevicesUI(results) {
+            results.forEach((res) => {
+                if (res.error || !res.data) return;
+
+                const { id, data, timeLabel } = res;
+                const devInfo = availableDevices.find(d => d.id.id === id) || { name: id };
+                const devName = devInfo.name || devInfo.label || id;
+
+                // Warning
+                const warningEl = document.getElementById(`warning-${id}`);
+                if (!data.used_fuel && !data.status) {
+                    if (warningEl) warningEl.classList.remove('hidden');
+                } else {
+                    if (warningEl) warningEl.classList.add('hidden');
+                }
+
+                // 1. Used Fuel
+                let fuelVal = 0;
+                if (data.used_fuel && data.used_fuel.length > 0) {
+                    fuelVal = parseFloat(data.used_fuel[0].value) || 0;
+                    const fuelEl = document.getElementById(`val-fuel-${id}`);
+                    if (fuelEl) fuelEl.textContent = fuelVal.toFixed(2);
+                }
+
+                // 2. Status Badge Update
+                if (data.status && data.status.length > 0) {
+                    const statusVal = String(data.status[0].value).toUpperCase();
+                    const badge = document.getElementById(`badge-status-${id}`);
+
+                    if (badge) {
+                        badge.textContent = statusVal;
+
+                        if (["ACTIVE", "READY", "DISPENSING", "RUNNING", "1", "TRUE"].includes(statusVal)) {
+                            badge.className = "badge-status badge-active";
+                        } else {
+                            badge.className = "badge-status badge-inactive";
+                        }
+                    }
+                }
+
+                // 3. CPU
+                let cpuVal = 0;
+                if (data.cpu_usage && data.cpu_usage.length > 0) {
+                    cpuVal = parseFloat(data.cpu_usage[0].value) || 0;
+                    const cpuEl = document.getElementById(`val-cpu-${id}`);
+                    const barCpu = document.getElementById(`bar-cpu-${id}`);
+                    if (cpuEl) cpuEl.textContent = `${cpuVal.toFixed(1)}%`;
+                    if (barCpu) barCpu.style.width = `${Math.min(100, cpuVal)}%`;
+                }
+
+                // 4. RAM
+                let ramVal = 0;
+                if (data.ram_usage && data.ram_usage.length > 0) {
+                    ramVal = parseFloat(data.ram_usage[0].value) || 0;
+                    const ramEl = document.getElementById(`val-ram-${id}`);
+                    const barRam = document.getElementById(`bar-ram-${id}`);
+                    if (ramEl) ramEl.textContent = `${ramVal.toFixed(1)}%`;
+                    if (barRam) barRam.style.width = `${Math.min(100, ramVal)}%`;
+                }
+
+                // Timestamp Card
+                const timeEl = document.getElementById(`time-${id}`);
+                if (timeEl) timeEl.textContent = timeLabel;
+
+                // Push Data ke Grafik
+                pushDataToMultiCharts(id, devName, timeLabel, fuelVal, cpuVal, ramVal);
+            });
+        }
+
+        function pushDataToMultiCharts(deviceId, deviceName, timeLabel, fuel, cpu, ram) {
+            const devIndex = selectedDeviceIds.indexOf(deviceId);
+            const palette = colorPalette[devIndex % colorPalette.length];
+
+            // 1. Chart Fuel
+            if (fuelChart) {
+                if (!fuelChart.data.labels.includes(timeLabel)) {
+                    fuelChart.data.labels.push(timeLabel);
+                    if (fuelChart.data.labels.length > maxDataPoints) fuelChart.data.labels.shift();
+                }
+
+                let dataset = fuelChart.data.datasets.find(ds => ds.deviceId === deviceId);
+                if (!dataset) {
+                    dataset = {
+                        deviceId: deviceId,
+                        label: deviceName,
+                        data: [],
+                        borderColor: palette.border,
+                        backgroundColor: palette.fill,
+                        fill: true,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: palette.border,
+                        pointBorderColor: palette.border,
+                        pointStyle: 'circle'
+                    };
+                    fuelChart.data.datasets.push(dataset);
+                }
+
+                dataset.data.push(fuel);
+                if (dataset.data.length > maxDataPoints) dataset.data.shift();
+                fuelChart.update('none');
+            }
+
+            // 2. Chart Hardware (CPU & RAM)
+            if (hardwareChart) {
+                if (!hardwareChart.data.labels.includes(timeLabel)) {
+                    hardwareChart.data.labels.push(timeLabel);
+                    if (hardwareChart.data.labels.length > maxDataPoints) hardwareChart.data.labels.shift();
+                }
+
+                // CPU
+                let cpuDataset = hardwareChart.data.datasets.find(ds => ds.deviceId === deviceId && ds.metric === 'cpu');
+                if (!cpuDataset) {
+                    cpuDataset = {
+                        deviceId: deviceId,
+                        metric: 'cpu',
+                        label: `[CPU] ${deviceName}`,
+                        data: [],
+                        borderColor: palette.border,
+                        backgroundColor: palette.border,
+                        pointBackgroundColor: palette.border,
+                        borderWidth: 2,
+                        tension: 0.3,
+                        pointRadius: 3
+                    };
+                    hardwareChart.data.datasets.push(cpuDataset);
+                }
+                cpuDataset.data.push(cpu);
+                if (cpuDataset.data.length > maxDataPoints) cpuDataset.data.shift();
+
+                // RAM (Putus-putus)
+                let ramDataset = hardwareChart.data.datasets.find(ds => ds.deviceId === deviceId && ds.metric === 'ram');
+                if (!ramDataset) {
+                    ramDataset = {
+                        deviceId: deviceId,
+                        metric: 'ram',
+                        label: `[RAM] ${deviceName}`,
+                        data: [],
+                        borderColor: palette.border,
+                        backgroundColor: palette.border,
+                        pointBackgroundColor: palette.border,
+                        borderDash: [4, 4],
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        pointRadius: 3
+                    };
+                    hardwareChart.data.datasets.push(ramDataset);
+                }
+                ramDataset.data.push(ram);
+                if (ramDataset.data.length > maxDataPoints) ramDataset.data.shift();
+
+                hardwareChart.update('none');
+            }
+        }
+
+        function toggleRawTelemetry() {
+            const container = document.getElementById('rawTelemetryContainer');
+            const icon = document.getElementById('iconToggleRaw');
+            const text = document.getElementById('textToggleRaw');
+
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                icon.className = "fa-solid fa-chevron-up transition-transform duration-200";
+                if (text) text.textContent = "Minimize";
+            } else {
+                container.classList.add('hidden');
+                icon.className = "fa-solid fa-chevron-down transition-transform duration-200";
+                if (text) text.textContent = "Expand";
+            }
+        }
+
+        function resetCharts() {
+            if (fuelChart) {
+                fuelChart.data.labels = [];
+                fuelChart.data.datasets = [];
+                fuelChart.update();
+            }
+            if (hardwareChart) {
+                hardwareChart.data.labels = [];
+                hardwareChart.data.datasets = [];
+                hardwareChart.update();
+            }
+        }
+
+        function clearChart(chart) {
+            if (chart) {
+                chart.data.labels = [];
+                chart.data.datasets.forEach(ds => ds.data = []);
+                chart.update();
+            }
+        }
+
+        async function handleConfigSubmit(event) {
+            event.preventDefault();
+            const baseUrl = document.getElementById('inputBaseUrl').value.trim().replace(/\/+$/, "");
+            const username = document.getElementById('inputUsername').value.trim();
+            const password = document.getElementById('inputPassword').value;
+
+            const submitBtn = document.getElementById('loginSubmitBtn');
+            const btnText = document.getElementById('loginBtnText');
+
+            submitBtn.disabled = true;
+            btnText.textContent = "Authenticating...";
+
+            try {
+                config.baseUrl = baseUrl;
+
+                const endpoint = '/api/auth/login';
+                const loginUrl = getApiUrl(endpoint);
+
+                const response = await fetch(loginUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (!response.ok) throw new Error("Gagal login! Periksa username & password.");
+
+                const data = await response.json();
+                config.username = username;
+                config.token = data.token;
+                saveConfig();
+
+                showToast("Login Berhasil!", "success");
+                closeConfigModal();
+                updateUIState();
+                fetchDevicesList();
+                startPolling();
+            } catch (err) {
+                showToast(err.message, "error");
+            } finally {
+                submitBtn.disabled = false;
+                btnText.textContent = "Simpan & Login";
+            }
+        }
+
+        function startPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            isPollingActive = true;
+            pollingInterval = setInterval(fetchAllDevicesTelemetry, 5000);
+            updatePollingUI();
+        }
+
+        function stopPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = null;
+            isPollingActive = false;
+            updatePollingUI();
+        }
+
+        function togglePolling() {
+            if (isPollingActive) {
+                stopPolling();
+                showToast("Auto Polling Dihentikan", "info");
+            } else {
+                startPolling();
+                fetchAllDevicesTelemetry();
+                showToast("Auto Polling Aktif (5s)", "info");
+            }
+        }
+
+        function updatePollingUI() {
+            const icon = document.getElementById('pollingIcon');
+            const text = document.getElementById('pollingText');
+            if (isPollingActive) {
+                icon.className = "fa-solid fa-pause text-amber-500";
+                if (text) text.textContent = "Auto 5s";
+            } else {
+                icon.className = "fa-solid fa-play text-emerald-600";
+                if (text) text.textContent = "Paused";
+            }
+        }
+
+        function setConnectionStatus(status, label) {
+            const badge = document.getElementById('connectionBadge');
+            const dot = document.getElementById('connectionDot');
+            const text = document.getElementById('connectionText');
+
+            text.textContent = label || status;
+            if (status === 'online') {
+                badge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+                dot.className = "pulse-dot pulse-dot-online";
+            } else {
+                badge.className = "inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200";
+                dot.className = "pulse-dot pulse-dot-offline";
+            }
+        }
+
+        function logout() {
+            config.token = '';
+            saveConfig();
+            stopPolling();
+            updateUIState();
+            setConnectionStatus("offline", "Logged Out");
+            showToast("Berhasil logout", "info");
+        }
+
+        function updateUIState() {
+            const logoutBtn = document.getElementById('logoutBtn');
+            const authAlert = document.getElementById('authAlert');
+
+            if (config.token) {
+                logoutBtn.classList.remove('hidden');
+                authAlert.classList.add('hidden');
+            } else {
+                logoutBtn.classList.add('hidden');
+                authAlert.classList.remove('hidden');
+            }
+        }
+
+        function openConfigModal() {
+            document.getElementById('configModal').classList.remove('hidden');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').classList.add('hidden');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            let bgClass = "bg-white border-slate-200 text-slate-800 shadow-lg";
+            let iconClass = "fa-circle-info text-blue-500";
+
+            if (type === 'success') {
+                bgClass = "bg-emerald-50 border-emerald-200 text-emerald-900 shadow-lg";
+                iconClass = "fa-circle-check text-emerald-600";
+            } else if (type === 'error') {
+                bgClass = "bg-rose-50 border-rose-200 text-rose-900 shadow-lg";
+                iconClass = "fa-circle-xmark text-rose-600";
+            }
+
+            toast.className = `pointer-events-auto p-3.5 rounded-xl border flex items-center gap-3 text-xs font-medium transition-all transform translate-y-2 opacity-0 ${bgClass}`;
+            toast.innerHTML = `<i class="fa-solid ${iconClass} text-base"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+    </script>
+</body>
+
+</html>
